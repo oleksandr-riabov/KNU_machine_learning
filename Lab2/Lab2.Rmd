@@ -1,0 +1,93 @@
+---
+title: "Lab2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Task
+
+Read the data
+```{r}
+data <- read.csv("./mlbootcamp5_train (1).csv", sep = ";")
+head(data, 10)
+```
+
+Transform the features: 
+- create "age in years" (`age_years`)dividing age by 365.25 and taking floor ($\lfloor{x}\rfloor$ is the largest integer that is less than or equal to $x$)
+- remove "age" feature
+- transfrom `cholesterol` and `gluc` to factor
+
+```{r}
+data$age_years <- floor(data$age/365.25)
+data <- subset(data, select=-c(age, id))
+data$cholesterol <- as.factor(data$cholesterol)
+data$gluc <- as.factor(data$gluc)
+data$cardio <- as.factor(data$cardio)
+head(data, 10)
+print(is.factor(data$cholesterol))
+print(is.factor(data$gluc))
+```
+
+Split data into train and test parts in the proportion of 7/3.
+The target feature is `cardio`
+
+```{r}
+library(caret)
+set.seed(2344)
+trainIndex <- createDataPartition(data$cardio, p = 0.7, list = FALSE, times = 1)
+train <- data[trainIndex, ]
+test  <- data[-trainIndex, ]
+head(train, 5)
+head(test, 5)
+```
+
+Train a decision tree on the dataset `training` with **max depth equal to 3**. For setting this parameter use function `rpart::rpart.control`. Use default cross calidation parameters.
+
+```{r}
+library(rpart)
+model <- train(cardio ~ ., data = train, method = "rpart", control = rpart.control(maxdepth = 3))
+```
+
+Plot final tree with `rattle` library
+
+```{r}
+library(rattle)
+fancyRpartPlot(model$finalModel, main="cardio")
+```
+
+What is the accuracy of prediction on test data?
+
+```{r}
+prediction <- predict(model, test)
+accuracy <- sum(prediction == test$cardio) / nrow(test)
+print(accuracy)
+```
+Now set cross validation parameters: `method = "cv"`, `number = 5`. Tree parameters set to default.
+
+```{r}
+fitControl <- trainControl(method = "cv", number = 5)
+model2 <- train(cardio ~ ., data = train, method = "rpart", trControl = fitControl)
+```
+
+Plot final tree with `rattle` library
+
+```{r}
+library(rattle)
+fancyRpartPlot(model2$finalModel, main="cardio")
+```
+
+What is the accuracy of prediction on test data?
+
+```{r}
+prediction2 <- predict(model2, test)
+newAccuracy <- sum(prediction2 == test$cardio) / nrow(test)
+print(newAccuracy)
+```
+
+Does the accuracy became better or not?
+```
+Точність залишилися без змін.
+```
