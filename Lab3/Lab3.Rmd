@@ -1,0 +1,57 @@
+---
+title: "Lab 3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Task
+
+Read the data. Pay attention that data has NA values. It's better to convert target variable to factor.
+```{r}
+df<-read.csv("./donner_party.csv")
+df<-na.omit(df)
+df$Survived<-as.factor(df$Survived)
+```
+
+For prediction we will use only variables `Sex` and `Age`. For predicting binary outcome we will use **Generalized Linear Model** (`method = "glm"`) and **caret package**. 
+
+```{r}
+library(caret)
+fit<-train(
+  Survived~Sex+Age,
+  data=df,
+  method='glm',
+  family=binomial
+)
+pred<-predict(fit,newdata=df)
+```
+
+What is your in-sample accuracy? Build a confusion matrix
+
+```{r}
+confusionMatrix(pred, df$Survived)
+```
+
+Use a cross-validation with `method = "repeatedcv"`, `number = 5`, `repeats = 10`. Does cross-validation improve the accuracy?
+
+```{r}
+fit2<-train(
+  Survived~Sex+Age,
+  data=df,
+  method='glm',
+  family=binomial,
+  trControl=trainControl(method='repeatedcv',number=5,repeats=10)
+)
+
+pred2<-predict(
+  fit2,
+  newdata=df
+)
+confusionMatrix(pred2,df$Survived)
+```
+
+## Точність не покращилась.
+
