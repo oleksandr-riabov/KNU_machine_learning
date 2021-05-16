@@ -1,0 +1,95 @@
+---
+title: "Lab4"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+This assignment is based on materials from Coursera course [Practical machine learning](https://www.coursera.org/learn/practical-machine-learning/home/welcome)
+
+## Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+## Data
+
+The training data for this project are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment. 
+
+## What you should do
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+Also you should explain how do you deal with NA's values and investigate correlation.
+
+You repository for this assignment should consist of R markdown file, compiled html file and prediction.csv file with data from pml-testing.csv and 'classe' column with predictions for 20 observation.
+
+
+```{r}
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(corrplot)
+```
+
+```{r}
+trainingData <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", header = TRUE)
+testingData <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", header = TRUE)
+```
+
+
+## Get rid of NA values, useless columns and split the data
+
+```{r}
+trainingData <- trainingData[, colSums(is.na(trainingData)) == 0] 
+testingData <- testingData[, colSums(is.na(testingData)) == 0]
+classe <- trainingData$classe
+trainingRemove <- grepl("^X|timestamp|window", names(trainingData))
+trainingData <- trainingData[, !trainingRemove]
+trainingCleaned <- trainingData[, sapply(trainingData, is.numeric)]
+trainingCleaned$classe <- classe
+testingRemove <- grepl("^X|timestamp|window", names(testingData))
+testingData <- testingData[, !testingRemove]
+testingCleaned <- testingData[, sapply(testingData, is.numeric)]
+set.seed(200) #Reproducible results for pseudo RNs
+inTrain <- createDataPartition(trainingCleaned$classe, p=0.70, list=F)
+trainData <- trainingCleaned[inTrain, ]
+testData <- trainingCleaned[-inTrain, ]
+```
+
+##Random Forest Tree
+```{r}
+controlFit<- trainControl(method="cv", 10)
+modelFit <- train(classe ~ ., data=trainData, method="rf", verbose=F, trControl=controlFit, nTree=200)
+modelFit
+
+predictTree <- predict(modelFit, testData)
+```
+
+## Prediction
+
+```{r}
+final_result <- predict(modelFit, testingCleaned[, -length(names(testingCleaned))])
+final_result
+write.csv(final_result,'./prediction.csv')
+```
+
+## Visualisation
+
+
+```{r}
+finalModel <- rpart(classe ~ ., data=trainData, method="class")
+prp(finalModel)
+cor_plot <- cor(trainData[, -length(names(trainData))], method="pearson")
+corrplot(cor_plot, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 100)
+```
